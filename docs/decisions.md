@@ -29,6 +29,19 @@
 | PUSH0 검사 | `contracts/script/check-push0.mjs` | `StableToken`, `TransparentUpgradeableProxy`, `ProxyAdmin` 산출물에 PUSH0 없음. 같은 소스를 shanghai로 빌드하면 검사가 실패하는 것도 확인(검사기 유효성) |
 | pnpm | 12.18.0 | Windows에 설치. 오프체인은 Windows Node 26으로 실행 |
 
+1단계 구현 메모 (2026-11-06):
+
+| 항목 | 내용 |
+| --- | --- |
+| `initialize` 서명 | `initialize(name, symbol, admin, minFreezeAge)`. 배포자가 `setMinFreezeAge`를 따로 부르지 않아도 되도록 대기 시간을 초기화 인자로 받는다. DEFAULT_ADMIN은 타임락이라 배포 후 즉시 바꾸기 어렵기 때문이다 |
+| MINTER 역할 관리 | `grantRole`·`revokeRole`에 `MINTER_ROLE`을 넘기면 `UseMinterFunctions()`로 거부한다. `renounceRole(MINTER_ROLE)`은 허용하되 한도를 0으로 만든다 |
+| `freeze`의 발신자 검사 | 보호 주소는 FREEZER **와** GUARDIAN을 둘 다 가져야 동결된다. 운영 Safe가 둘 다 갖는 구성(6장)을 전제한다 |
+| `mint`·`mintForRecovery`·`burn`의 발신자 동결 검사 | minter 자신이 동결되면 발행·소각도 실패한다(USDC와 동일). 12장 매트릭스의 "spender" 축 |
+| `wipeFrozen` 경계 | 동결되지 않았거나 잔고가 0이면 실패한다(`AccountNotFrozen`, `NothingToWipe`). `block.timestamp >= frozenAt + minFreezeAge` 는 등호 포함 |
+| `forge test` 전 `forge clean` | openzeppelin-foundry-upgrades는 `out/build-info`에 같은 컨트랙트가 두 번 있으면 `Found multiple contracts` 로 실패한다. 소스를 바꾼 뒤에는 `forge clean && forge test`로 돌린다 |
+| `forge coverage`와 업그레이드 테스트 | coverage 모드는 플러그인이 읽는 `out/` 아티팩트를 만들지 않아 `Upgrade.t.sol`만 실패한다. 커버리지 수치는 나머지 스위트로 계산되며 `forge test`에서는 업그레이드 테스트도 통과한다 |
+| V2 목의 `missing-initializer` | 이미 초기화된 프록시의 V2는 reinitializer만 쓰므로 `test/mocks/StableTokenV2.sol`에만 `@custom:oz-upgrades-unsafe-allow missing-initializer`를 단다. 실제 V2를 만들 때 다시 판단한다 |
+
 ## 2. 자체 체인 환경 (4단계 전)
 
 | 항목 | 답 | 날짜 |
@@ -46,9 +59,9 @@
 
 | 항목 | 답 | 날짜 |
 | --- | --- | --- |
-| 토큰 이름 / 심볼 | 미답 | |
-| 멀티시그 서명자와 정족수 (거버넌스, 운영, 회수, 금고, 발행) | 미답 (기본: 테스트넷 값, design.md 6장·10장) | |
-| 타임락 executor 개방 여부 | 미답 (기본: `address(0)` 개방) | |
+| 토큰 이름 / 심볼 | **Stable Token / STB** | 2026-11-06 |
+| 멀티시그 서명자와 정족수 (거버넌스, 운영, 회수, 금고, 발행) | **테스트넷 기본값 사용** (design.md 6장·10장: 거버넌스 2/3, 운영 2/3, 회수 2/3, 금고 2/3, 발행 1/2). 서명자 주소는 2단계 배포 시 정한다 | 2026-11-06 |
+| 타임락 executor 개방 여부 | **개방 (`address(0)`)**. 제안 없이는 아무것도 실행할 수 없으므로 권한이 아니다 | 2026-11-06 |
 | 봇 서명 키 위치 (KMS/HSM) | 미답 (기본: Sepolia는 로컬 암호화 키스토어) | |
 | 알림 채널과 수신 대상 | 미답 | |
 | 테스트넷에서 멀티시그 서명자 겹침 허용 여부 | 미답 | |
@@ -58,6 +71,7 @@
 | 날짜 | 결정 | 근거 |
 | --- | --- | --- |
 | 2026-11-06 | 설계문서 검수 반영. 사건별 온체인 회수 회계(`wipedByCase`/`reissuedByCase`, 불변식 7), R1b 유출 수신 점수 전파 룰, `hot` 주소는 점수가 아니라 R1·R6 발동 기준, 타임락 admin `address(0)`과 executor 개방 기본값, MINTER admin = MASTER_MINTER, R7 승인 목록을 타임락 이벤트에서 자동 생성, 제출 경로 설정값(`both` 기본)과 Sepolia 측정, R2 nonce 상한, 승인 링크 인증 요건 | 검수에서 발견한 7.3/8.1 모순, 단일 핫월렛 탈취 미동결, 배포 검증 누락을 바로잡기 위함 |
+| 2026-11-06 | 1단계 시작. 토큰 이름 Stable Token / STB, 타임락 executor 개방, 테스트넷 멀티시그 기본값 확정 | design.md 3장 "토큰과 운영 주체" 질문에 대한 사용자 답변 |
 | 2026-11-06 | 저장소 초기화. `Architect.md`를 `docs/design.md`로 이동, `CLAUDE.md` 작성 | design.md 11장 구조 |
 
 ## 5. 잔여 위험 (design.md 15장, 정식 발행 전 재검토)

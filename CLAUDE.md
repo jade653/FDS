@@ -49,7 +49,8 @@ infra/                docker-compose (PostgreSQL, Redis, Anvil)
   ```
 - solc 0.8.28, `evm_version = paris` 고정. OpenZeppelin v5.4.0 고정(v5.5.0+는 paris 빌드 불가). 버전을 올리면 `node script/check-push0.mjs`를 다시 돌린다.
 - 오프체인(pnpm, Node)은 Windows에서 실행한다.
+- 소스를 바꾼 뒤 테스트는 `forge clean && forge test`로 돌린다. openzeppelin-foundry-upgrades가 중복 build-info를 거부한다. `forge coverage`에서는 `Upgrade.t.sol`만 실패하는데 플러그인 아티팩트가 없어서이며 정상이다(`docs/decisions.md` 1절).
 
 ## 현재 단계
 
-0단계 (준비). `docs/decisions.md`의 미답 항목이 남아 있으면 1단계로 가지 않는다.
+1단계 (컨트랙트) 구현 완료, 사용자 확인 대기. 확인 전에는 2단계(배포 스크립트)로 가지 않는다. 3장 "토큰과 운영 주체" 답은 `docs/decisions.md` 3절에 있다.

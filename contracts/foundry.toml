@@ -1,0 +1,66 @@
+# 컴파일 설정은 모든 profile이 공유한다 (docs/decisions.md 1절).
+# 자체 체인이 PUSH0(Shanghai)을 지원하지 않으므로 두 체인 모두 paris로 빌드해 같은 바이트코드를 쓴다.
+# solc_version과 evm_version은 Foundry 기본값에 기대지 않고 항상 명시한다.
+
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+test = "test"
+script = "script"
+
+solc_version = "0.8.28"
+evm_version = "paris"
+optimizer = true
+optimizer_runs = 200
+via_ir = false
+bytecode_hash = "none"
+cbor_metadata = false
+
+# openzeppelin-foundry-upgrades 필수 설정
+ffi = true
+ast = true
+build_info = true
+extra_output = ["storageLayout"]
+
+fs_permissions = [{ access = "read", path = "./" }]
+verbosity = 2
+
+[profile.default.fuzz]
+runs = 256
+max_test_rejects = 65536
+
+[profile.default.invariant]
+runs = 256
+depth = 32
+fail_on_revert = false
+
+# 모든 profile은 default를 상속한다 (Foundry 기본 동작). 컴파일 설정은 여기서 덮어쓰지 않는다.
+# CI에서는 퍼즈·불변식 횟수를 늘린다.
+[profile.ci.fuzz]
+runs = 2048
+
+[profile.ci.invariant]
+runs = 1024
+depth = 64
+
+# 체인별 profile은 배포·검증 관련 값만 다르다.
+[profile.sepolia]
+eth_rpc_url = "${SEPOLIA_RPC_URL}"
+
+[profile.custom]
+eth_rpc_url = "${CUSTOM_CHAIN_RPC_URL}"
+
+[rpc_endpoints]
+anvil = "http://127.0.0.1:8545"
+sepolia = "${SEPOLIA_RPC_URL}"
+custom = "${CUSTOM_CHAIN_RPC_URL}"
+
+[etherscan]
+sepolia = { key = "${ETHERSCAN_API_KEY}", chain = 11155111 }
+
+[fmt]
+line_length = 120
+tab_width = 4
+bracket_spacing = false
+int_types = "long"

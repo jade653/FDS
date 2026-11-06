@@ -1,0 +1,32 @@
+# secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+keystore/
+*.keystore
+
+# foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+# contracts/lib/ 는 git 서브모듈이므로 커밋한다
+contracts/.gas-snapshot
+
+# node
+node_modules/
+offchain/**/dist/
+offchain/**/.turbo/
+*.tsbuildinfo
+pnpm-debug.log*
+
+# local infra
+infra/data/
+*.log
+
+# editors / os
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

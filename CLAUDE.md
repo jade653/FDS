@@ -56,8 +56,8 @@ infra/                docker-compose (PostgreSQL, Redis, Anvil)
 
 ## 현재 단계
 
-2~5단계 구현 완료. 6단계(Sepolia): Safe·토큰 배포, 시연 시나리오 1b·2·4 성공, 사용자가 자동 동결 전환(`docs/decisions.md` 4절 2026-11-09). 보류: 시나리오 3과 제출 경로 측정, 실트래픽 섀도 관찰. 7단계(자체 체인)는 `docs/decisions.md` 2절 답이 필요하다. 확인이 필요한 해석은 `docs/decisions.md` 4.1절에 있다.
+2~5단계 구현 완료. 6단계(Sepolia): Safe·토큰 배포, 시나리오 1~7 전부 실행(3은 대기 거래 감지 실패로 부분 성공), 자동 동결 전환(`docs/decisions.md` 4절 2026-11-09~10). 보류: 대기 거래 감지 개선, 제출 경로 측정, 실트래픽 섀도 관찰. 7단계(자체 체인)는 `docs/decisions.md` 2절 답이 필요하다. 확인이 필요한 해석은 `docs/decisions.md` 4.1절에 있다.
 
-Sepolia 시연: `packages/ops-cli/src/demo-main.ts` (`init`, `status`, `mint-plan`, `fund`, `run --scenario 1b|2|4`, `--round 0..2`). 시연 지갑은 `.env`의 `DEMO_MNEMONIC`에서 파생하고, 같은 코드를 `packages/e2e/test/demo.test.ts`가 Anvil에서 검증한다. 감시탑은 `WATCH_FROM=latest`로 띄운다.
+Sepolia 시연: `packages/ops-cli/src/demo-main.ts` (`init`, `status`, `addresses`, `mint-plan`, `fund`, `run --scenario 1|1b|2|3|4`, 2부 Safe 배치 명령들, `--round 0..2`). 1부는 `demo.ts`, 2부(1·3·5·6·7)는 `demo-extra.ts`. 시연 지갑은 `.env`의 `DEMO_MNEMONIC`에서 파생하고, 같은 코드를 `packages/e2e/test/demo.test.ts`가 Anvil에서 검증한다. 감시탑은 `WATCH_FROM=latest`로 띄운다.
 
 Windows에서 `pnpm.exe`가 Smart App Control에 막히면 `node node_modules/vitest/vitest.mjs run --project unit|e2e`, `node node_modules/tsx/dist/cli.mjs packages/ops-cli/src/main.ts ...`로 실행한다.

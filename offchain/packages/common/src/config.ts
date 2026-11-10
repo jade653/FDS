@@ -46,6 +46,8 @@ export const rulesSchema = z.object({
     poll_interval_ms: z.number().int().positive(),
     reorg_depth: z.number().int().positive(),
     pending: z.boolean(),
+    /** pending 거래 조회 초당 상한. 넘치는 해시는 버린다 (공개 RPC 요청 한도 보호) */
+    pending_fetch_per_sec: z.number().positive().default(5),
   }),
   responder: z.object({
     kill_switch: z.boolean(),

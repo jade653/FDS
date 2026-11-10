@@ -78,6 +78,15 @@ describe("R2 신규 주소로 대량 유입", () => {
     expect(await t.rulesOf(X)).toEqual(["R2"]);
   });
 
+  it("발동: 감시탑이 늦게 처리해 최신 nonce가 커졌어도, 유입 블록 시점 nonce로 판정한다", async () => {
+    // 공격자가 유입 직후 분산 송금 20건을 연달아 내 최신 nonce는 20이지만, 유입 블록에서는 0이었다.
+    const t = setup();
+    t.chain.nonces.set(X, 20);
+    t.chain.noncesAt.set(`${X.toLowerCase()}@${t.b.block}`, 0);
+    await t.detector.processBlock([t.b.transfer(USER, X, 100_000)]);
+    expect(await t.rulesOf(X)).toEqual(["R2"]);
+  });
+
   it("미발동: 오래된 지갑(nonce > 5)의 첫 입금", async () => {
     const t = setup();
     t.chain.nonces.set(OLD, 6);

@@ -12,10 +12,12 @@ export function posKey(block: bigint, txIndex: number, logIndex: number): string
 
 /**
  * 주소 첫 등장 시각, 누적 거래 수, 동결 여부, 체인 nonce를 붙인다 (design.md 7.1 Enricher).
- * "신규 주소"는 토큰 기준 첫 등장과 체인 nonce를 함께 본다. nonce는 첫 조회 때 RPC로 읽어 저장한다.
+ * "신규 주소"는 토큰 기준 첫 등장과 이벤트 블록 시점의 체인 nonce를 함께 본다.
  */
 export class Enricher {
   private cache = new Map<Address, AddressInfo>();
+  /** (주소, 블록) → 그 블록 시점 nonce. 같은 블록의 여러 이벤트가 RPC를 한 번만 부르게 한다 */
+  private nonceAt = new Map<string, number>();
 
   constructor(
     private readonly store: AddressStore,
@@ -58,20 +60,30 @@ export class Enricher {
     return this.load(a);
   }
 
-  /** 토큰 첫 등장이 maxAgeSec 이내이고 체인 nonce가 maxNonce 이하면 신규. 처음 보는 주소도 nonce를 본다. */
-  async isNew(a: Address, now: number, maxAgeSec: number, maxNonce: number): Promise<boolean> {
+  /**
+   * 토큰 첫 등장이 maxAgeSec 이내이고 체인 nonce가 maxNonce 이하면 신규. 처음 보는 주소도 nonce를 본다.
+   * nonce는 이벤트가 일어난 블록 시점으로 읽는다. 처리 시점의 최신 nonce를 쓰면, 감시탑이 늦게 처리하는 사이
+   * 공격자가 거래를 더 낸 경우(분산 송금을 미리 서명해 연달아 내는 경우) 신규 주소를 놓친다.
+   */
+  async isNew(a: Address, now: number, maxAgeSec: number, maxNonce: number, block?: bigint): Promise<boolean> {
     const k = lower(a);
     if (k === ZERO) return false;
-    let info = await this.load(k);
+    const info = await this.load(k);
     if (info && info.firstSeenTs < now - maxAgeSec) return false;
-    let nonce = info?.nonce ?? null;
-    if (nonce === null) {
-      nonce = await this.chain.getTransactionCount(k);
-      if (info) {
-        info = {...info, nonce};
-        await this.save(info);
+    let nonce: number;
+    if (block === undefined) {
+      nonce = info?.nonce ?? (await this.chain.getTransactionCount(k));
+    } else {
+      const key = `${k}@${block}`;
+      const hit = this.nonceAt.get(key);
+      if (hit !== undefined) nonce = hit;
+      else {
+        nonce = await this.chain.getTransactionCount(k, block);
+        if (this.nonceAt.size > 10_000) this.nonceAt.clear();
+        this.nonceAt.set(key, nonce);
       }
     }
+    if (info && info.nonce !== nonce) await this.save({...info, nonce});
     return nonce <= maxNonce;
   }
 

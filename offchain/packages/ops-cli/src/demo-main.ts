@@ -5,9 +5,23 @@
 //
 //   init                      시연 지갑(DEMO_MNEMONIC)·승인 키를 .env에 만들고(비어 있을 때만) 주소 분류 파일을 쓴다
 //   status                    회차 지갑의 ETH·STB 잔고와 동결 여부
+//   addresses                 회차 시연 지갑 주소 (2부 지갑 포함)
 //   mint-plan --out f.json    발행 Safe가 실행할 발행 배치 (Safe 앱 Transaction Builder에서 불러와 서명)
 //   fund                      funder → 회차 지갑 가스 배분 (funder에 Sepolia ETH가 있어야 한다)
 //   run --scenario 1b|2|4     시나리오 실행. 감시탑이 auto 모드로 돌고 있어야 동결된다
+//
+//   2부 (시나리오 1·3·5·6·7, 보통 --round 1):
+//   fund --set extra          핫월렛 3개·피해자·3의 공격자에게 가스 배분
+//   allowance-plan            7b: 금고 Safe의 minter 한도 배치 (R7 알림이 나야 한다)
+//   extra-mint-plan           1·3 준비: 발행 Safe의 발행 배치 (요청 기록 없는 발행 → R8 알림)
+//   run --scenario 1|3        1 대형 탈취, 3 출구 경쟁
+//   timelock-plan             7a: 거버넌스 Safe의 타임락 예약 배치 (거래소 주소 보호 지정)
+//   timelock-execute          7a: 지연이 지난 예약 작업 실행 (funder가 보낸다)
+//   stolen-bot                5: 봇 키스토어로 무관한 주소 21개 동결 (탈취 흉내, BOT_KEYSTORE_PATH/PASSWORD)
+//   bot-incident-plan         5: 운영 Safe의 FREEZER 회수 + 해제 배치
+//   bot-check                 5: 봇이 아직 동결할 수 있는지 eth_call로 확인 (보내지 않음)
+//   bot-restore-plan          5: 운영 Safe의 FREEZER 재부여 배치 (시연 복구)
+//   6 회수는 ops CLI(main.ts)의 case·wipe·ledger·reissue·reconcile을 쓴다.
 //
 // 비밀값(니모닉, 승인 키, 운영자 토큰)은 화면에 출력하지 않는다. 운영자 토큰 원문은 저장소 밖 파일에만 쓴다.
 import {existsSync, mkdirSync, readFileSync, writeFileSync} from "node:fs";
@@ -30,6 +44,19 @@ import {
   setEnvIfEmpty,
   type DemoChain,
 } from "./demo";
+import {
+  botCanStillFreeze,
+  demoAllowancePlan,
+  demoBotIncidentPlan,
+  demoBotRestorePlan,
+  demoExtraMintPlan,
+  demoTimelockExecute,
+  demoTimelockPlan,
+  scenario1,
+  scenario3,
+  scenario5StolenBot,
+} from "./demo-extra";
+import type {SafeBatch} from "./ops";
 import {PreconditionError} from "./ops";
 
 const ROOT = resolve(import.meta.dirname, "../../../..");
@@ -42,6 +69,8 @@ const {values: v, positionals} = parseArgs({
     round: {type: "string", default: "0"},
     scenario: {type: "string"},
     out: {type: "string"},
+    set: {type: "string", default: "base"},
+    "skip-inflow": {type: "boolean", default: false},
   },
 });
 
@@ -130,12 +159,21 @@ async function checkChain(c: DemoChain, want: number) {
   if (got !== want) throw new Error(`RPC chain id ${got} != config chain_id ${want}`);
 }
 
+let writeRound = 0;
+function writePlan(name: string, b: SafeBatch, note: string) {
+  const out = v.out ?? resolve(ROOT, `demo-${name}-${v.chain}-r${writeRound}.json`);
+  writeFileSync(out, JSON.stringify(b, null, 2));
+  console.log(`wrote ${out}
+  Safe ${b.meta.createdFromSafeAddress}, 거래 ${b.transactions.length}건. ${note}`);
+}
+
 async function main() {
   loadDotEnv();
   const [cmd] = positionals;
   if (cmd === "init") return init();
 
   const round = Number(v.round);
+  writeRound = round;
   const actors = demoActors(need("DEMO_MNEMONIC"), round);
   const {c, ctx, explorer} = chain();
   await checkChain(c, ctx.book.chainId);
@@ -159,7 +197,51 @@ async function main() {
     case "fund": {
       const bal = await c.client.getBalance({address: actors.funder.address});
       if (bal === 0n) throw new PreconditionError(`funder ${actors.funder.address} has no ETH: Sepolia ETH를 보낸 뒤 다시 실행`);
-      await demoFund(c, actors);
+      if (v.set !== "base" && v.set !== "extra") throw new Error("--set base|extra");
+      await demoFund(c, actors, v.set);
+      return;
+    }
+    case "addresses": {
+      const a = actors;
+      const rows: [string, string][] = [
+        ["hot", a.hot.address], ["hotB", a.hotB.address], ["hotC", a.hotC.address], ["victim", a.victim.address],
+        ["partner", a.partner.address], ["exchange", a.exchange], ["router", a.router], ["recovered", a.recovered],
+        ["attacker1", a.attacker1], ["attacker1b", a.attacker1b], ["attacker2", a.attacker2.address], ["attacker3", a.attacker3.address],
+      ];
+      console.log(`round ${round}`);
+      for (const [k, x] of rows) console.log(`  ${k.padEnd(10)} ${x}`);
+      console.log(`  innocents  ${a.innocents.length}개 (${a.innocents[0]} …)`);
+      return;
+    }
+    case "allowance-plan":
+      return writePlan("allowance", demoAllowancePlan(ctx), "금고 Safe (2/3). 실행되면 감시탑에 R7 최고 등급 알림이 떠야 한다");
+    case "extra-mint-plan":
+      return writePlan("extra-mint", await demoExtraMintPlan(ctx, actors), "발행 Safe (1/2). 요청 기록이 없는 발행이라 R8 알림이 떠야 한다");
+    case "timelock-plan":
+      return writePlan("timelock", await demoTimelockPlan(ctx, actors), "거버넌스 Safe (2/3). 실행 뒤 지연(10분)이 지나면 timelock-execute");
+    case "bot-incident-plan":
+      return writePlan("bot-incident", demoBotIncidentPlan(ctx, actors), "운영 Safe (2/3). 봇 FREEZER 회수 + 무관한 주소 해제");
+    case "bot-restore-plan":
+      return writePlan("bot-restore", demoBotRestorePlan(ctx), "운영 Safe (2/3). 시연 복구: 봇에 FREEZER 재부여");
+    case "timelock-execute": {
+      const r = await demoTimelockExecute(c, ctx, actors, actors.funder);
+      console.log(`7a 실행: ${explorer(r.tx)}
+  ${actors.exchange} 보호 주소=${r.protectedNow}. 감시탑에는 R7 알림이 없어야 한다 (타임락 경유)`);
+      return;
+    }
+    case "stolen-bot": {
+      const {keystoreSigner} = await import("../../responder/src/signer");
+      const bot = keystoreSigner(need("BOT_KEYSTORE_PATH"), need("BOT_KEYSTORE_PASSWORD"));
+      if (bot.address !== ctx.book.bot) throw new Error(`keystore ${bot.address} is not the configured bot ${ctx.book.bot}`);
+      console.log(`시나리오 5 (round ${round}): 탈취된 봇 키로 무관한 주소 ${actors.innocents.length}개 동결`);
+      const r = await scenario5StolenBot(c, actors, bot);
+      console.log(`  동결 ${r.frozen}개 (block ${r.block}): ${explorer(r.tx)}`);
+      console.log(`  감시탑 콘솔에 봇 동결 속도 최고 등급 알림(bot.freeze_rate)이 떠야 한다. 다음: bot-incident-plan`);
+      return;
+    }
+    case "bot-check": {
+      const can = await botCanStillFreeze(c, ctx.book.bot, actors.innocents[0]);
+      console.log(`봇 ${ctx.book.bot} 동결 가능 = ${can}`);
       return;
     }
     case "run": {
@@ -177,6 +259,18 @@ async function main() {
         console.log(`  공격자에 남은 금액 ${r.stillWithAttacker} STB (동결), 빠져나간 금액 ${r.launderedOut} STB`);
         console.log(`  동결 tx ${explorer(r.attacker.freezeTx)}`);
         console.log(`  수신 주소 동결은 감시탑 콘솔의 related_addresses 알림 링크로 승인한다`);
+      } else if (s === "1") {
+        console.log(`시나리오 1 (round ${round}): 핫월렛 3개 동시 탈취 → 자동 동결`);
+        const r = await scenario1(c, actors);
+        for (const o of r.outflows) console.log(`  유출 ${o.ok ? "성공" : "실패"} block ${o.block}: ${explorer(o.tx)}`);
+        console.log(`  결과: 공격자 동결 +${r.attacker.blocksAfterFirstOutflow}블록, 핫월렛 ${r.hotFrozen}개 동결. 동결 전 유출 ${r.drainedBeforeFreeze} STB, 공격자에 묶인 금액 ${r.attackerBalanceFrozen} STB`);
+        console.log(`  동결 tx ${explorer(r.attacker.freezeTx)}`);
+      } else if (s === "3") {
+        console.log(`시나리오 3 (round ${round}): 출구 경쟁 (pending DEX approve 전 동결)`);
+        const r = await scenario3(c, actors, {skipInflow: v["skip-inflow"]});
+        console.log(`  approve: block ${r.approveBlock} #${r.approveIndex} ${r.approveStatus} ${explorer(r.approveTx)}`);
+        console.log(`  동결:    block ${r.freeze.block} #${r.freeze.index} ${explorer(r.freeze.tx)}`);
+        console.log(`  결과: 동결이 먼저=${r.freezeFirst}, 라우터 허용량=${r.allowance} (0이면 approve 차단 성공)`);
       } else if (s === "4") {
         console.log(`시나리오 4 (round ${round}): 파트너 → 거래소 대량 송금 (오탐 방지)`);
         const r = await scenario4(c, actors);
@@ -184,7 +278,7 @@ async function main() {
         console.log(`  송금 tx ${explorer(r.tx)}\n  감시탑 콘솔에 사람 확인 알림(R1)이 떠야 한다`);
         if (r.partnerFrozen || r.exchangeFrozen) process.exitCode = 2;
       } else {
-        throw new Error("--scenario 1b|2|4");
+        throw new Error("--scenario 1|1b|2|3|4");
       }
       return;
     }

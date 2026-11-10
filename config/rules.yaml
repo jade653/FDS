@@ -59,6 +59,7 @@ ingestor:
   poll_interval_ms: 1000
   reorg_depth: 64
   pending: true # WebSocket pending 구독 (RPC가 지원할 때)
+  pending_fetch_per_sec: 5 # pending 거래 조회 초당 상한. 공개 RPC 요청 한도를 블록 처리에 남겨 둔다
 
 responder:
   kill_switch: false # true면 아무것도 서명하지 않고 알림만 한다 (8.3)

@@ -74,9 +74,15 @@ export function makeConfig(opts: BookOpts = {}, rules = loadRules(), risk: Addre
 export class FakeChain implements ChainReader {
   balances = new Map<Address, bigint>();
   nonces = new Map<Address, number>();
+  /** `${address}@${block}` → 그 블록 시점 nonce. 없으면 nonces(최신)를 쓴다 */
+  noncesAt = new Map<string, number>();
   code = new Map<Address, Hex>();
   frozen = new Set<Address>();
-  async getTransactionCount(a: Address) {
+  async getTransactionCount(a: Address, blockNumber?: bigint) {
+    if (blockNumber !== undefined) {
+      const at = this.noncesAt.get(`${a.toLowerCase()}@${blockNumber}`);
+      if (at !== undefined) return at;
+    }
     return this.nonces.get(a) ?? 0;
   }
   async balanceOf(a: Address) {

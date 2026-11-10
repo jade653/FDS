@@ -35,4 +35,4 @@ infra/data/
 .idea/
 .DS_Store
 Thumbs.db
-demo-mint-*.json
+/demo-*.json

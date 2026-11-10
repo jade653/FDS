@@ -85,7 +85,7 @@ export class RuleEngine {
     const r = c.cfg.rules;
     const id = eventId(e);
     const {from, to, value, timestamp: ts, blockNumber: block, txHash} = e;
-    const newTo = await c.enricher.isNew(to, ts, r.R2.new_address_max_age_hours * 3600, r.R2.new_address_max_nonce);
+    const newTo = await c.enricher.isNew(to, ts, r.R2.new_address_max_age_hours * 3600, r.R2.new_address_max_nonce, block);
 
     // R1 / R1b: 감시 지갑 유출 속도
     if (r.R1.enabled && c.book.isWatched(from)) {

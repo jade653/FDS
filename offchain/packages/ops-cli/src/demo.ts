@@ -43,6 +43,19 @@ export interface DemoActors {
   /** 2 공격자. 받은 돈을 20개 신규 주소로 나눠 보낸다 */
   attacker2: Account;
   launder: Address[];
+  /** 1 대형 탈취: 핫월렛이 3개 필요하다 (hot, hotB, hotC). 모두 hot으로 분류된다 */
+  hotB: Account;
+  hotC: Account;
+  /** 1 공격자. 받기만 한다 */
+  attacker1: Address;
+  /** 3 출구 경쟁 공격자. 받은 뒤 DEX 라우터에 approve를 낸다 */
+  attacker3: Account;
+  /** DEX 라우터 자리 (exits). 실제 DEX는 없고 approve 대상 주소로만 쓴다 */
+  router: Address;
+  /** 6 회수: 소각한 금액을 다시 받을 회사의 새 지갑 */
+  recovered: Address;
+  /** 5 봇 키 탈취: 탈취된 봇이 무차별로 동결하는 무관한 주소 21개 (상한 20 초과) */
+  innocents: Address[];
 }
 
 export function demoActors(mnemonic: string, round: number): DemoActors {
@@ -59,6 +72,13 @@ export function demoActors(mnemonic: string, round: number): DemoActors {
     attacker1b: at(base + 10).address,
     attacker2: at(base + 11),
     launder: Array.from({length: LAUNDER_COUNT}, (_, i) => at(base + 20 + i).address),
+    hotB: at(base + 5),
+    hotC: at(base + 6),
+    recovered: at(base + 7).address,
+    router: at(base + 8).address,
+    attacker1: at(base + 12).address,
+    attacker3: at(base + 13),
+    innocents: Array.from({length: 21}, (_, i) => at(base + 50 + i).address),
   };
 }
 
@@ -100,11 +120,17 @@ export function demoAddressesYaml(opts: {chainId: number; deployment: string; mn
     `chain_id: ${opts.chainId}`,
     `deployment: ${JSON.stringify(opts.deployment)}`,
     ...(opts.bot ? [`bot: "${opts.bot}"`] : []),
-    `hot:${list(all.map((a) => ({address: a.hot.address, label: `demo-hot-r${a.round}`})))}`,
+    `hot:${list(
+      all.flatMap((a) => [
+        {address: a.hot.address, label: `demo-hot-r${a.round}`},
+        {address: a.hotB.address, label: `demo-hotB-r${a.round}`},
+        {address: a.hotC.address, label: `demo-hotC-r${a.round}`},
+      ]),
+    )}`,
     `watched:${list(all.map((a) => ({address: a.partner.address, label: `demo-partner-r${a.round}`})))}`,
     "protected: []",
     `whitelabel:${list(all.map((a) => ({address: a.exchange, label: `demo-exchange-r${a.round}`})))}`,
-    "exits: []",
+    `exits:${list(all.map((a) => ({address: a.router, label: `demo-router-r${a.round}`})))}`,
     "",
   ].join("\n");
 }
@@ -159,13 +185,23 @@ export interface DemoChain {
 }
 
 /** funder → 회차 지갑 가스 배분. 이미 목표 이상이면 건너뛴다. */
-export async function demoFund(c: DemoChain, a: DemoActors): Promise<Hex[]> {
-  const targets: [Address, string][] = [
-    [a.hot.address, DEMO_GAS.hot],
-    [a.victim.address, DEMO_GAS.victim],
-    [a.partner.address, DEMO_GAS.partner],
-    [a.attacker2.address, DEMO_GAS.attacker2],
-  ];
+export async function demoFund(c: DemoChain, a: DemoActors, set: "base" | "extra" = "base"): Promise<Hex[]> {
+  // base: 1부(1b·2·4), extra: 2부(1·3). 2부는 핫월렛 3개와 피해자, 3의 공격자에게 가스를 준다.
+  const targets: [Address, string][] =
+    set === "base"
+      ? [
+          [a.hot.address, DEMO_GAS.hot],
+          [a.victim.address, DEMO_GAS.victim],
+          [a.partner.address, DEMO_GAS.partner],
+          [a.attacker2.address, DEMO_GAS.attacker2],
+        ]
+      : [
+          [a.hot.address, "0.004"],
+          [a.hotB.address, "0.004"],
+          [a.hotC.address, "0.004"],
+          [a.victim.address, "0.004"],
+          [a.attacker3.address, "0.004"],
+        ];
   const w = c.wallet(a.funder);
   const hashes: Hex[] = [];
   for (const [to, eth] of targets) {

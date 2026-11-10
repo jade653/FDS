@@ -1,0 +1,6 @@
+packages:
+  - "packages/*"
+
+# esbuild(tsx, vitest가 씀)의 설치 스크립트만 허용한다.
+allowBuilds:
+  esbuild: true

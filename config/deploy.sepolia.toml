@@ -1,0 +1,30 @@
+# Sepolia 배포 입력값. 6단계(사용자 지시) 전에 Safe 주소를 채운다.
+# 0 주소가 하나라도 남아 있으면 스크립트가 시작하지 않는다.
+# 브로드캐스트는 사람이 한다 (design.md 0장 7항):
+#   forge script script/Deploy.s.sol --rpc-url sepolia --account <keystore> --sender <addr> --broadcast
+
+[checks]
+expected_chain_id = 11155111
+require_contract_holders = true # Safe(코드가 있는 주소)만 허용. 봇은 EOA라 제외된다
+
+[token]
+name = "Stable Token"
+symbol = "STB"
+min_freeze_age = 600
+
+[timelock]
+min_delay = 600
+
+[holders]
+governance_safe = "0xC0d3E55990827604e0eD0daE726de9259a8Ba5bF"
+ops_safe = "0x1460f9F05f130A167D93169dBFA589584d1E3205"
+recovery_safe = "0xFe0c4D4D2cdCd8E18aFa7Bd13554433734483E20"
+treasury_safe = "0x4f0180C591Ca5156a1BD07222F17808cC8731fdf"
+minter = "0x753E80E0DAd774C070811ef37C1B204Fe593A8EA" # 발행 Safe (1/2)
+bot = "0xd15467F34091390c2935BaFA2f5a9f05DBe3Ae1A"
+
+[minter]
+allowance = 1000000000000
+
+[protected]
+extra = []

@@ -23,7 +23,12 @@ ast = true
 build_info = true
 extra_output = ["storageLayout"]
 
-fs_permissions = [{ access = "read", path = "./" }]
+# 배포 스크립트: config/ 읽기, deployments/ 쓰기
+fs_permissions = [
+    { access = "read", path = "./" },
+    { access = "read", path = "../config" },
+    { access = "read-write", path = "../deployments" },
+]
 verbosity = 2
 
 [profile.default.fuzz]

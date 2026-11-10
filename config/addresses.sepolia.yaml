@@ -1,0 +1,28 @@
+# 시연용 주소 분류. `demo init`이 DEMO_MNEMONIC에서 만든다. 손으로 고치면 다음 init에서 덮어쓴다.
+# hot은 R1·R6 발동 시 점수와 무관하게 자동 동결, whitelabel은 자동 동결하지 않는다 (design.md 8.1).
+
+chain_id: 11155111
+deployment: "../deployments/sepolia.json"
+hot:
+  - address: "0xBe5E707A0096dc8d451FCFdf4CBdEa985d9d0ed4"
+    label: "demo-hot-r0"
+  - address: "0x9e53b59c24481f0011586e060bDe03726C3D1E09"
+    label: "demo-hot-r1"
+  - address: "0x3Fe8820d37f5dc97383F940fea73A1629AfA95f1"
+    label: "demo-hot-r2"
+watched:
+  - address: "0x642FBDe9Be5Ff53A7A589240aaFc202b86F1A872"
+    label: "demo-partner-r0"
+  - address: "0xCE7224b6876D3EC230Dfe80d40DCB09a52cBc877"
+    label: "demo-partner-r1"
+  - address: "0x3Df00C646Bf511De9CA70B8c60F1ACc5bC6e761D"
+    label: "demo-partner-r2"
+protected: []
+whitelabel:
+  - address: "0x3def402F5D82BC1ef488791c1Af490f76Cc7265d"
+    label: "demo-exchange-r0"
+  - address: "0x850dDe1eC544e50252c49Dd5984Fd962801FbBb2"
+    label: "demo-exchange-r1"
+  - address: "0xCFaee67F9E252D68285d382DF5E150fa55D21613"
+    label: "demo-exchange-r2"
+exits: []

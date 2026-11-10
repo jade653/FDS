@@ -1,0 +1,28 @@
+# 자체 EVM 체인 배포 입력값. docs/decisions.md 2절(chainId, Safe 배포 여부 등)이 채워진 뒤 7단계에서 쓴다.
+# expected_chain_id가 0이면 스크립트가 시작하지 않는다.
+
+[checks]
+expected_chain_id = 0
+require_contract_holders = true
+
+[token]
+name = "Stable Token"
+symbol = "STB"
+min_freeze_age = 600
+
+[timelock]
+min_delay = 600
+
+[holders]
+governance_safe = "0x0000000000000000000000000000000000000000"
+ops_safe = "0x0000000000000000000000000000000000000000"
+recovery_safe = "0x0000000000000000000000000000000000000000"
+treasury_safe = "0x0000000000000000000000000000000000000000"
+minter = "0x0000000000000000000000000000000000000000"
+bot = "0x0000000000000000000000000000000000000000"
+
+[minter]
+allowance = 1000000000000
+
+[protected]
+extra = []

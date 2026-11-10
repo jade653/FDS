@@ -1,0 +1,90 @@
+# 탐지 룰, 점수, 임계값, 대응·알림 설정 (design.md 7장·8장·10장 테스트넷 기본값).
+# 재시작 없이 다시 읽는다. 읽기에 실패하면 이전 설정을 유지하고 알림을 보낸다 (7.4).
+# 변경은 Git 커밋으로만 한다. 토큰 수량은 토큰 단위(소수점 6자리 적용 전)다.
+
+window_minutes: 30
+thresholds:
+  auto_freeze: 80
+  human_review: 50
+
+rules:
+  R1: # 감시 지갑 유출 속도. hot 주소는 점수와 무관하게 자동 동결 (8.1)
+    enabled: true
+    score: 60
+    window_minutes: 10
+    balance_pct: 30
+    abs_amount: 100000
+  R1b: # R1이 발동한 유출의 수신 주소. 화이트 라벨 제외
+    enabled: true
+    score: 60
+  R2: # 신규 주소로 대량 유입
+    enabled: true
+    score: 40
+    min_amount: 50000
+    new_address_max_age_hours: 24
+    new_address_max_nonce: 5
+  R3: # 분산 송금
+    enabled: true
+    score: 40
+    window_minutes: 10
+    min_new_recipients: 10
+  R4: # 집중 유입 (여러 감시 지갑 → 같은 주소)
+    enabled: true
+    score: 50
+    window_minutes: 30
+    min_watched_sources: 2
+  R5: # 출구 접근 (대량 수신 주소 → DEX·브리지 approve 또는 호출)
+    enabled: true
+    score: 40
+    window_minutes: 30
+    large_inflow_amount: 50000
+  R6: # 감시 EOA에 EIP-7702 위임 또는 코드. 자체 체인 지원 여부는 docs/decisions.md 2절
+    enabled: true
+    score: 80
+  R7: # 승인되지 않은 관리 이벤트 → 최고 등급 알림만
+    enabled: true
+  R8: # 승인된 발행 요청과 맞지 않는 Mint → 최고 등급 알림만
+    enabled: true
+  R9: # 외부 위험 목록
+    enabled: true
+    score: 80
+    lists:
+      - lists/sanctions.txt
+  R10: # 동결 주소가 관여한 실패·pending 트랜잭션
+    enabled: true
+    score: 30
+
+ingestor:
+  lag_alert_blocks: 5
+  poll_interval_ms: 1000
+  reorg_depth: 64
+  pending: true # WebSocket pending 구독 (RPC가 지원할 때)
+
+responder:
+  kill_switch: false # true면 아무것도 서명하지 않고 알림만 한다 (8.3)
+  max_auto_freezes_per_hour: 20
+  submit_route: both # private_first | public_only | both. 6단계 측정 후 확정
+  priority_fee_multiplier: 3
+  min_priority_fee_gwei: 2
+  max_priority_fee_gwei: 50
+  resend_after_blocks: 1
+  resend_max: 3
+  batch_max: 50
+  gas_alert_freezes: 10
+  freeze_gas_estimate: 80000
+
+approval:
+  link_ttl_minutes: 60
+  base_url: http://127.0.0.1:8787
+
+monitor:
+  bot_freezes_per_hour_alert: 20 # 봇 operator의 Frozen 이벤트가 이보다 많으면 키 탈취·오작동 의심
+
+notifier:
+  channels:
+    - type: console
+    # - type: slack
+    #   webhook_url_env: SLACK_WEBHOOK_URL
+    # - type: telegram
+    #   bot_token_env: TELEGRAM_BOT_TOKEN
+    #   chat_id_env: TELEGRAM_CHAT_ID

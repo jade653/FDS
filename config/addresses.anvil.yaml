@@ -1,0 +1,13 @@
+# 로컬 Anvil 주소 분류 (design.md 8.1). 컨트랙트·Safe 주소는 deployment 파일에서 읽는다.
+# 보호 주소 = deployment.protected ∪ 아래 protected. hot은 자동으로 감시 대상(watched)에 포함된다.
+# E2E 테스트는 이 파일을 쓰지 않고 실행마다 임시 파일을 만든다.
+
+chain_id: 31337
+deployment: ../deployments/anvil.json
+
+# bot: "0x..." # 봇 키를 교체했을 때만. 없으면 deployment의 bot
+watched: [] # 감시 지갑 (R1, R4, R6). 자사 지갑, 파트너 지갑 등
+hot: [] # 자사 핫월렛. R1·R6 발동 시 점수와 무관하게 자동 동결
+protected: [] # 금고 등 추가 보호 주소
+whitelabel: [] # 거래소 입금 주소, 브리지, DEX 풀. 자동 동결 안 함
+exits: [] # DEX 라우터, 브리지 (R5)

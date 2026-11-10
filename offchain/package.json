@@ -1,0 +1,25 @@
+{
+  "name": "stablecoin-offchain",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.18.0",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "gen:abi": "node packages/abi/scripts/gen-abi.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --project unit",
+    "test:e2e": "vitest run --project e2e",
+    "test:all": "vitest run",
+    "watchtower": "tsx packages/service/src/main.ts",
+    "ops": "tsx packages/ops-cli/src/main.ts"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "@types/pg": "8.23.1",
+    "ioredis-mock": "8.13.1",
+    "pg-mem": "3.0.14",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7"
+  }
+}

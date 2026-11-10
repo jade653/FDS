@@ -1,0 +1,9 @@
+{
+  "name": "@stb/responder",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": { "@stb/abi": "workspace:*", "@stb/common": "workspace:*", "viem": "2.57.16", "ioredis": "6.0.0" },
+  "devDependencies": { "@stb/detector": "workspace:*" }
+}

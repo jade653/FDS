@@ -1,0 +1,16 @@
+{
+  "name": "@stb/notifier",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@stb/common": "workspace:*",
+    "viem": "2.57.16"
+  },
+  "devDependencies": {
+    "@stb/detector": "workspace:*"
+  }
+}

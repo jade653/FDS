@@ -48,9 +48,16 @@ infra/                docker-compose (PostgreSQL, Redis, Anvil)
   wsl -d Ubuntu -- bash -lc 'export PATH=$HOME/.foundry/bin:$PATH; cd /mnt/c/Users/mustree/projects/stablecoin/contracts && forge build'
   ```
 - solc 0.8.28, `evm_version = paris` 고정. OpenZeppelin v5.4.0 고정(v5.5.0+는 paris 빌드 불가). 버전을 올리면 `node script/check-push0.mjs`를 다시 돌린다.
-- 오프체인(pnpm, Node)은 Windows에서 실행한다.
+- 오프체인(pnpm, Node)은 Windows에서 실행한다. `offchain/`에서 `pnpm typecheck`, `pnpm test`(단위), `pnpm test:e2e`(로컬 Anvil 시나리오 1~7. WSL Anvil을 띄우고 Deploy.s.sol로 배포한다).
+- Sepolia Safe 생성: `script/CreateSafes.s.sol` (입력 `config/safes.sepolia.toml`, 출력 `deployments/safes-sepolia.json`). 테스트 `test/CreateSafes.t.sol`은 Sepolia 포크가 필요해 `SEPOLIA_RPC_URL`이 없으면 건너뛴다.
+- 로컬 배포·권한 검증: (WSL) `contracts/script/anvil-deploy.sh`. 로컬 Anvil 전용이며 chainId가 31337이 아니면 거부한다.
+- 컨트랙트 ABI를 바꾸면 (WSL) `forge build` → (Windows) `pnpm gen:abi`.
 - 소스를 바꾼 뒤 테스트는 `forge clean && forge test`로 돌린다. openzeppelin-foundry-upgrades가 중복 build-info를 거부한다. `forge coverage`에서는 `Upgrade.t.sol`만 실패하는데 플러그인 아티팩트가 없어서이며 정상이다(`docs/decisions.md` 1절).
 
 ## 현재 단계
 
-1단계 (컨트랙트) 구현 완료, 사용자 확인 대기. 확인 전에는 2단계(배포 스크립트)로 가지 않는다. 3장 "토큰과 운영 주체" 답은 `docs/decisions.md` 3절에 있다.
+2~5단계 구현 완료. 6단계(Sepolia): Safe·토큰 배포, 시연 시나리오 1b·2·4 성공, 사용자가 자동 동결 전환(`docs/decisions.md` 4절 2026-11-09). 보류: 시나리오 3과 제출 경로 측정, 실트래픽 섀도 관찰. 7단계(자체 체인)는 `docs/decisions.md` 2절 답이 필요하다. 확인이 필요한 해석은 `docs/decisions.md` 4.1절에 있다.
+
+Sepolia 시연: `packages/ops-cli/src/demo-main.ts` (`init`, `status`, `mint-plan`, `fund`, `run --scenario 1b|2|4`, `--round 0..2`). 시연 지갑은 `.env`의 `DEMO_MNEMONIC`에서 파생하고, 같은 코드를 `packages/e2e/test/demo.test.ts`가 Anvil에서 검증한다. 감시탑은 `WATCH_FROM=latest`로 띄운다.
+
+Windows에서 `pnpm.exe`가 Smart App Control에 막히면 `node node_modules/vitest/vitest.mjs run --project unit|e2e`, `node node_modules/tsx/dist/cli.mjs packages/ops-cli/src/main.ts ...`로 실행한다.

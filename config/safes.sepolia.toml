@@ -1,0 +1,39 @@
+# Sepolia Safe 5개 생성 입력값 (design.md 6장 테스트넷 정족수). CreateSafes.s.sol이 읽는다.
+# 서명자는 Safe 앱에서 서명할 지갑(MetaMask 등)이다. 배포자 EOA와 봇 주소는 서명자가 될 수 없다.
+# 테스트넷에서는 Safe끼리 서명자가 겹쳐도 된다 (docs/decisions.md 3절). 운영에서는 나눈다.
+# 0 주소가 하나라도 남아 있으면 스크립트가 시작하지 않는다.
+
+[checks]
+expected_chain_id = 11155111
+
+[safe]
+# 정식 Safe v1.4.1 배포 주소 (safe-global/safe-deployments). 스크립트가 코드와 VERSION을 확인한다.
+factory = "0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67"          # SafeProxyFactory
+singleton = "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762"        # SafeL2 (이벤트로 인덱싱돼 Safe 앱에 바로 보인다)
+fallback_handler = "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99" # CompatibilityFallbackHandler
+# 같은 입력이면 같은 주소가 나온다. 이미 있는 Safe는 다시 만들지 않는다.
+salt_nonce = 20261109
+
+[governance]
+owners = ["0x5C921C1a2A25a05996Ce465Dbc36262bcdEfb207", "0x28b53A7a9ce4905F81F258913E6056a53c670cdE", "0xB3Ec5f2bbB80e90ec457165d13EF469893a54951"]
+threshold = 2
+
+[ops]
+owners = ["0x5C921C1a2A25a05996Ce465Dbc36262bcdEfb207", "0x28b53A7a9ce4905F81F258913E6056a53c670cdE", "0xB3Ec5f2bbB80e90ec457165d13EF469893a54951"]
+threshold = 2
+
+[recovery]
+owners = ["0x5C921C1a2A25a05996Ce465Dbc36262bcdEfb207", "0x28b53A7a9ce4905F81F258913E6056a53c670cdE", "0xB3Ec5f2bbB80e90ec457165d13EF469893a54951"]
+threshold = 2
+
+[treasury]
+owners = ["0x5C921C1a2A25a05996Ce465Dbc36262bcdEfb207", "0x28b53A7a9ce4905F81F258913E6056a53c670cdE", "0xB3Ec5f2bbB80e90ec457165d13EF469893a54951"]
+threshold = 2
+
+[minter]
+owners = ["0x5C921C1a2A25a05996Ce465Dbc36262bcdEfb207", "0x28b53A7a9ce4905F81F258913E6056a53c670cdE"]
+threshold = 1
+
+[forbidden]
+# 서명자가 되면 안 되는 주소. 봇 주소를 여기에 넣는다. 배포자는 스크립트가 따로 막는다.
+addresses = ["0xd15467F34091390c2935BaFA2f5a9f05DBe3Ae1A"] # 봇

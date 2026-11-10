@@ -1,0 +1,8 @@
+{
+  "name": "@stb/e2e",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": { "@stb/abi": "workspace:*", "@stb/common": "workspace:*", "@stb/detector": "workspace:*", "@stb/responder": "workspace:*", "@stb/notifier": "workspace:*", "@stb/ops-cli": "workspace:*", "@stb/service": "workspace:*", "viem": "2.57.16" }
+}

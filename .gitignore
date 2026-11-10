@@ -21,6 +21,11 @@ offchain/**/.turbo/
 *.tsbuildinfo
 pnpm-debug.log*
 
+# 로컬 배포 결과 (실행마다 바뀜). sepolia.json 등 실제 체인 결과는 커밋한다.
+deployments/anvil.json
+deployments/e2e-*.json
+ledger/anvil.jsonl
+
 # local infra
 infra/data/
 *.log
@@ -30,3 +35,4 @@ infra/data/
 .idea/
 .DS_Store
 Thumbs.db
+demo-mint-*.json

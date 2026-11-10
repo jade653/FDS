@@ -1,0 +1,27 @@
+# 로컬 인프라: PostgreSQL 16, Redis 7, Anvil (design.md 11장).
+# 비밀번호는 로컬 개발용 기본값이다. 실제 환경 값은 .env에서 읽는다.
+#   docker compose -f infra/docker-compose.yml up -d
+# 주의: 이 저장소의 개발 머신에는 Docker가 없어 이 파일은 실행해 보지 않았다 (docs/decisions.md 1절 "검증 범위와 한계").
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: stablecoin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-stablecoin}
+      POSTGRES_DB: stablecoin
+    ports: ["127.0.0.1:5432:5432"]
+    volumes: ["./data/postgres:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stablecoin"]
+      interval: 5s
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["127.0.0.1:6379:6379"]
+    volumes: ["./data/redis:/data"]
+
+  anvil:
+    image: ghcr.io/foundry-rs/foundry:v1.9.0
+    entrypoint: ["anvil", "--host", "0.0.0.0", "--port", "8545"]
+    ports: ["127.0.0.1:8545:8545"]
